@@ -20,6 +20,14 @@ test('settings inputs use theme colors instead of white browser defaults', () =>
     assert.match(css, /color:\s*var\(--SmartThemeBodyColor/);
 });
 
+test('settings action buttons keep Chinese labels horizontal', () => {
+    const css = fs.readFileSync('public/scripts/extensions/third-party/reply-polisher/style.css', 'utf8');
+
+    assert.match(css, /\.reply-polisher-actions\s+\.menu_button/);
+    assert.match(css, /width:\s*fit-content/);
+    assert.match(css, /white-space:\s*nowrap/);
+});
+
 test('runtime notifications explain rewrite progress in Chinese', () => {
     const script = fs.readFileSync('public/scripts/extensions/third-party/reply-polisher/index.js', 'utf8');
 

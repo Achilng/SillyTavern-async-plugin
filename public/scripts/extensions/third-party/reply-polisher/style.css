@@ -31,6 +31,11 @@
     gap: 8px;
 }
 
+.reply-polisher-actions .menu_button {
+    width: fit-content;
+    white-space: nowrap;
+}
+
 .reply-polisher-status {
     opacity: 0.8;
     font-size: 0.9em;
