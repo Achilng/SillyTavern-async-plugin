@@ -2,10 +2,13 @@
 
 ## 当前状态
 
-- 状态：设计已确认，尚未开始实现。
-- 工作区：当前仓库根目录位于 `D:\Agent`。
-- 本次更新前已有的项目文件：`AGENTS.md`。
-- Git 状态：此目录当前不是 Git 仓库。
+- 状态：代码实现和自动化验证已完成，尚未在真实 SillyTavern UI 中做端到端运行验证。
+- 工作区：当前仓库根目录位于 `D:\Agent\酒馆插件`。
+- 本次更新前已有的项目文件：`AGENTS.md`、`PLAN.md`、`PROGRESS.md`。
+- Git 状态：当前目录是 Git 仓库，分支 `main` 跟踪 `origin/main`。
+- 已定位本机 SillyTavern 安装目录：`D:\酒馆\chu\SillyTavern`。
+- 已确认本机 SillyTavern 版本：`1.14.0`。
+- 说明：未修改本机 SillyTavern 的 `config.yaml`；当前 `enableServerPlugins` 仍为 `false`。
 
 ## 用户已确认的决定
 
@@ -38,12 +41,27 @@
 
 ## 未解决事项
 
-- [ ] 定位实际的 SillyTavern 安装目录或目标开发副本。
-- [ ] 确认已安装的 SillyTavern 版本。
-- [ ] 确认当前 SillyTavern 版本的准确前端导入路径。
-- [ ] 确认当前 SillyTavern 版本的准确服务器插件路由注册模式。
-- [ ] 决定最终插件显示名称。暂定名称：`Reply Polisher`。
-- [ ] 决定最终插件 ID。暂定 ID：`reply-polisher`。
+- [x] 定位实际的 SillyTavern 安装目录或目标开发副本：`D:\酒馆\chu\SillyTavern`。
+- [x] 确认已安装的 SillyTavern 版本：`1.14.0`。
+- [x] 确认当前 SillyTavern 版本的准确前端导入路径：优先使用 `SillyTavern.getContext()`；可用上下文包括 `eventSource`、`eventTypes`/`event_types`、`extensionSettings`、`saveSettingsDebounced`、`updateMessageBlock`、`saveChat`、`getCurrentChatId`。
+- [x] 确认当前 SillyTavern 版本的准确服务器插件路由注册模式：`plugins/<id>/index.js` 导出 `init(router)` 和 `info`，路由自动挂载到 `/api/plugins/<id>`。
+- [x] 决定最终插件显示名称：`Reply Polisher`。
+- [x] 决定最终插件 ID：`reply-polisher`。
+- [ ] 在实际 SillyTavern 安装中启用 `config.yaml` 的 `enableServerPlugins: true`。当前本机值为 `false`，不得由 Agent 擅自修改。
+
+## 已确认的 SillyTavern 1.14.0 集成点
+
+- UI 扩展可安装到 `public/scripts/extensions/third-party/reply-polisher`。
+- 下载/第三方扩展在 HTTP 下挂载到 `/scripts/extensions/third-party`。
+- UI 扩展 manifest 需要 `display_name`、`js`，可选 `css`。
+- 设置持久化使用 `SillyTavern.getContext().extensionSettings` 和 `saveSettingsDebounced()`。
+- 设置面板模板可使用 `renderExtensionTemplateAsync('third-party/reply-polisher', 'settings')` 后追加到 `#extensions_settings2`。
+- `CHARACTER_MESSAGE_RENDERED`、`MESSAGE_SWIPED`、`MESSAGE_RECEIVED`、`GENERATION_ENDED` 等事件存在；本插件优先使用 `CHARACTER_MESSAGE_RENDERED` 和 `MESSAGE_SWIPED`。
+- `updateMessageBlock(messageId, message)` 可重渲染消息内容。
+- `saveChat` 是 `saveChatConditional` 的上下文别名，可用于保存聊天。
+- 服务器插件默认禁用，需要用户自行设置 `enableServerPlugins: true`。
+- 服务器插件目录下的 `plugins/package.json` 设置了 `"type": "commonjs"`，因此 `plugins/reply-polisher/index.js` 可使用 CommonJS。
+- 服务器插件路由会自动挂载到 `/api/plugins/reply-polisher`。
 
 ## 实施进度
 
@@ -55,14 +73,26 @@
 - [x] 已选择 OpenAI 兼容后端格式。
 - [x] 已创建根实施计划。
 - [x] 已创建根进度跟踪器。
-- [ ] UI 扩展已搭建骨架。
-- [ ] 服务器插件已搭建骨架。
-- [ ] 后端设置 API 已实现。
-- [ ] 后端重写 API 已实现。
-- [ ] 前端设置 UI 已实现。
-- [ ] 自动重写流程已实现。
-- [ ] 手动重写按钮已实现。
-- [ ] 端到端验证已完成。
+- [x] 已定位本机 SillyTavern 1.14.0 集成点。
+- [x] 已补全根实施计划的后续任务。
+- [x] UI 扩展已搭建骨架。
+- [x] 服务器插件已搭建骨架。
+- [x] 后端设置 API 已实现。
+- [x] 后端重写 API 已实现。
+- [x] 前端设置 UI 已实现。
+- [x] 自动重写流程已实现。
+- [x] 手动重写按钮已实现。
+- [x] 自动化端到端验证已完成（SillyTavern plugin-loader + 浏览器 harness）。真实安装后的手动验证仍需用户启用 server plugins 并配置模型 B。
+
+## 验证记录
+
+- [x] `node --test tests\reply-polisher-server.test.mjs tests\reply-polisher-ui-core.test.mjs`：11 项通过。
+- [x] `node --check plugins\reply-polisher\index.js`：通过。
+- [x] `node --check public\scripts\extensions\third-party\reply-polisher\index.js`：通过。
+- [x] `node --check public\scripts\extensions\third-party\reply-polisher\core.js`：通过。
+- [x] SillyTavern 1.14.0 `src/plugin-loader.js` 真实加载验证：当前仓库 `plugins/reply-polisher` 被挂载到 `/api/plugins/reply-polisher`，包含 `GET /settings`、`POST /settings`、`POST /rewrite`。
+- [x] 临时浏览器 harness 验证：设置面板能挂载，`hasApiKey` 状态显示为 `API key saved`，手动重写只发送 `prompt`、`text`、`temperature`、`maxTokens`、`timeoutMs`，并原地更新消息和触发保存。
+- [ ] 真实 SillyTavern 浏览器 UI 中的设置面板显示、配置保存、自动重写和手动重写验证：未执行，因为需要安装到实际 SillyTavern 并启用 `enableServerPlugins`，且需要可用的模型 B API 配置。
 
 ## 后续工作注意事项
 

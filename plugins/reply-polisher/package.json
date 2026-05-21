@@ -1,0 +1,6 @@
+{
+    "name": "sillytavern-reply-polisher-server",
+    "private": true,
+    "type": "commonjs",
+    "main": "index.js"
+}

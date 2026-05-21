@@ -1,0 +1,14 @@
+{
+    "display_name": "Reply Polisher",
+    "loading_order": 999,
+    "requires": [],
+    "optional": [],
+    "dependencies": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Codex",
+    "version": "0.1.0",
+    "homePage": "",
+    "auto_update": false,
+    "minimum_client_version": "1.14.0"
+}
