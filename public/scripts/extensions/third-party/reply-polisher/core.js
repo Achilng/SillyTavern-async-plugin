@@ -11,6 +11,17 @@ export const DEFAULT_SETTINGS = Object.freeze({
 
 const SKIPPED_EVENT_TYPES = new Set(['continue', 'append', 'appendFinal', 'impersonate', 'quiet']);
 
+export function getTextFingerprint(text) {
+    const value = String(text ?? '');
+    let hash = 0;
+
+    for (let i = 0; i < value.length; i += 1) {
+        hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+    }
+
+    return `${value.length}:${hash >>> 0}`;
+}
+
 export function getSettings(extensionSettings) {
     if (!extensionSettings[MODULE_NAME] || typeof extensionSettings[MODULE_NAME] !== 'object') {
         extensionSettings[MODULE_NAME] = structuredClone(DEFAULT_SETTINGS);
@@ -42,7 +53,12 @@ export function shouldProcessMessage(message, { allowProcessed = false } = {}) {
         return false;
     }
 
-    if (!allowProcessed && message.extra?.reply_polisher?.processed) {
+    const marker = message.extra?.reply_polisher;
+    const markerMatchesCurrentSwipe = marker?.processed
+        && marker.swipeId === message.swipe_id
+        && marker.textHash === getTextFingerprint(message.mes);
+
+    if (!allowProcessed && markerMatchesCurrentSwipe) {
         return false;
     }
 
@@ -89,6 +105,8 @@ export function applyRewriteToMessage(message, rewriteText) {
     message.extra.reply_polisher = {
         processed: true,
         processedAt: new Date().toISOString(),
+        swipeId: message.swipe_id,
+        textHash: getTextFingerprint(text),
     };
 
     if (Array.isArray(message.swipes) && typeof message.swipe_id === 'number') {
@@ -116,10 +134,10 @@ export function runInBackground(work, onError = console.error) {
     Promise.resolve(work).catch(onError);
 }
 
-export function getLatestProcessableMessageId(context) {
+export function getLatestProcessableMessageId(context, options = {}) {
     const chat = Array.isArray(context.chat) ? context.chat : [];
     for (let i = chat.length - 1; i >= 0; i -= 1) {
-        if (shouldProcessMessage(chat[i])) {
+        if (shouldProcessMessage(chat[i], options)) {
             return i;
         }
     }

@@ -8,8 +8,28 @@ test('filters messages that must not be rewritten automatically', () => {
     assert.equal(core.shouldProcessMessage({ is_system: true, mes: 'system' }), false);
     assert.equal(core.shouldProcessMessage({ extra: { isSmallSys: true }, mes: 'small system' }), false);
     assert.equal(core.shouldProcessMessage({ mes: '' }), false);
-    assert.equal(core.shouldProcessMessage({ mes: 'done', extra: { reply_polisher: { processed: true } } }), false);
+    assert.equal(core.shouldProcessMessage({
+        mes: 'done',
+        swipe_id: 0,
+        extra: { reply_polisher: { processed: true, swipeId: 0, textHash: core.getTextFingerprint('done') } },
+    }), false);
     assert.equal(core.shouldProcessMessage({ mes: 'assistant reply', extra: {} }), true);
+});
+
+test('allows stale processed markers copied to a new swipe', () => {
+    const message = {
+        mes: 'new swipe text',
+        swipe_id: 2,
+        extra: {
+            reply_polisher: {
+                processed: true,
+                swipeId: 1,
+                textHash: core.getTextFingerprint('old swipe text'),
+            },
+        },
+    };
+
+    assert.equal(core.shouldProcessMessage(message), true);
 });
 
 test('skips continue events while allowing normal and swipe events', () => {
@@ -52,6 +72,8 @@ test('applies rewrite in place and syncs active swipe metadata', () => {
     assert.equal(message.mes, 'polished');
     assert.equal(message.swipes[1], 'polished');
     assert.equal(message.extra.reply_polisher.processed, true);
+    assert.equal(message.extra.reply_polisher.swipeId, 1);
+    assert.equal(message.extra.reply_polisher.textHash, core.getTextFingerprint('polished'));
     assert.equal(message.swipe_info[1].extra.reply_polisher.processed, true);
 });
 
@@ -88,4 +110,18 @@ test('runs asynchronous work without returning a blocking promise', async () => 
     assert.equal(returned, undefined);
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(completed, true);
+});
+
+test('can find the latest assistant reply for manual rewriting even if already processed', () => {
+    const context = {
+        chat: [{
+            is_user: false,
+            mes: 'processed reply',
+            swipe_id: 0,
+            extra: { reply_polisher: { processed: true, swipeId: 0, textHash: core.getTextFingerprint('processed reply') } },
+        }],
+    };
+
+    assert.equal(core.getLatestProcessableMessageId(context), -1);
+    assert.equal(core.getLatestProcessableMessageId(context, { allowProcessed: true }), 0);
 });

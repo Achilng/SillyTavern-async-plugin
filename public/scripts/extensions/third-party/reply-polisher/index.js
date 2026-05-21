@@ -240,7 +240,7 @@ function handleSwipedMessage(messageId) {
 async function manualRewriteLatest() {
     updateBehaviorSetting();
 
-    const messageId = getLatestProcessableMessageId(context);
+    const messageId = getLatestProcessableMessageId(context, { allowProcessed: true });
     if (messageId < 0) {
         toastr.warning('没有可润色的助手回复。', 'Reply Polisher');
         return;

@@ -84,18 +84,21 @@
 - [x] 手动重写按钮已实现。
 - [x] 自动重写改为后台执行，避免阻塞 SillyTavern 正常发送流程。
 - [x] 自动/手动润色增加运行中和完成提示。
+- [x] 已修复旧 `reply_polisher.processed` 标记被 SillyTavern 复制到新 swipe 后导致自动/手动润色误判为无可处理回复的问题。
 - [x] 自动化端到端验证已完成（SillyTavern plugin-loader + 浏览器 harness）。真实安装后的手动验证仍需用户启用 server plugins 并配置模型 B。
 
 ## 验证记录
 
 - [x] `node --test tests\reply-polisher-server.test.mjs tests\reply-polisher-ui-core.test.mjs`：11 项通过。
 - [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs tests\reply-polisher-server.test.mjs`：15 项通过。
+- [x] `node --test tests\reply-polisher-ui-core.test.mjs`：8 项通过，覆盖旧处理标记、新 swipe、手动重新润色。
 - [x] `node --check plugins\reply-polisher\index.js`：通过。
 - [x] `node --check public\scripts\extensions\third-party\reply-polisher\index.js`：通过。
 - [x] `node --check public\scripts\extensions\third-party\reply-polisher\core.js`：通过。
 - [x] SillyTavern 1.14.0 `src/plugin-loader.js` 真实加载验证：当前仓库 `plugins/reply-polisher` 被挂载到 `/api/plugins/reply-polisher`，包含 `GET /settings`、`POST /settings`、`POST /rewrite`。
 - [x] 临时浏览器 harness 验证：设置面板能挂载，`hasApiKey` 状态显示为 `API key saved`，手动重写只发送 `prompt`、`text`、`temperature`、`maxTokens`、`timeoutMs`，并原地更新消息和触发保存。
 - [x] 本机 SillyTavern HTTP 路由验证：`/scripts/extensions/third-party/reply-polisher/index.js` 已包含运行提示文案，`/api/plugins/reply-polisher/settings` 返回 200 且 `hasApiKey: true`。
+- [x] 本机当前“花音”聊天文件验证：旧 `reply_polisher.processed` 标记不再阻止当前 active swipe 自动润色，手动查找可定位最新助手回复。
 - [ ] 真实 SillyTavern 浏览器 UI 中的设置面板显示、配置保存、自动重写和手动重写验证：仍需浏览器刷新后发送一次消息验证真实模型 B 调用。
 
 ## 后续工作注意事项
