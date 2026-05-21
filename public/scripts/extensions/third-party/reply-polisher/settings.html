@@ -18,9 +18,6 @@
                 <label for="reply_polisher_base_url">模型 B base URL</label>
                 <input id="reply_polisher_base_url" type="text" autocomplete="off" placeholder="https://api.example.com/v1" />
 
-                <label for="reply_polisher_model">模型 B 模型名</label>
-                <input id="reply_polisher_model" type="text" autocomplete="off" placeholder="model-b-name" />
-
                 <label for="reply_polisher_api_key">模型 B API key</label>
                 <input id="reply_polisher_api_key" type="password" autocomplete="off" placeholder="留空则保留已保存密钥" />
 
@@ -28,6 +25,15 @@
                     <input id="reply_polisher_clear_api_key" type="checkbox" />
                     <span>清除已保存 API key</span>
                 </label>
+
+                <label for="reply_polisher_model">模型 B 模型名</label>
+                <input id="reply_polisher_model" type="text" autocomplete="off" placeholder="model-b-name" />
+                <div class="reply-polisher-actions reply-polisher-model-picker">
+                    <button id="reply_polisher_load_models" class="menu_button" type="button">获取模型列表</button>
+                    <select id="reply_polisher_model_list" aria-label="选择模型" disabled>
+                        <option value="">选择模型...</option>
+                    </select>
+                </div>
 
                 <div class="reply-polisher-actions">
                     <button id="reply_polisher_save_connection" class="menu_button" type="button">保存模型设置</button>

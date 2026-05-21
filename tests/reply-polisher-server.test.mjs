@@ -30,6 +30,21 @@ test('normalizes OpenAI-compatible chat completions URLs', () => {
     );
 });
 
+test('normalizes OpenAI-compatible model list URLs', () => {
+    assert.equal(
+        plugin._private.buildModelsUrl('https://api.example.test/v1/'),
+        'https://api.example.test/v1/models',
+    );
+    assert.equal(
+        plugin._private.buildModelsUrl('https://api.example.test/v1/chat/completions'),
+        'https://api.example.test/v1/models',
+    );
+    assert.equal(
+        plugin._private.buildModelsUrl('https://api.example.test/v1/models'),
+        'https://api.example.test/v1/models',
+    );
+});
+
 test('builds a rewrite request with only the prompt and target text', () => {
     const payload = plugin._private.buildRewritePayload({
         model: 'writer-model',
@@ -69,6 +84,48 @@ test('extracts non-empty rewrite text and rejects empty model output', () => {
     );
 });
 
+test('extracts unique model ids from OpenAI-compatible model lists', () => {
+    assert.deepEqual(
+        plugin._private.extractModelIds({
+            data: [
+                { id: 'z-model' },
+                { id: 'a-model' },
+                { id: 'z-model' },
+                { name: 'ignored-name-without-id' },
+            ],
+        }),
+        ['a-model', 'z-model'],
+    );
+
+    assert.deepEqual(
+        plugin._private.extractModelIds([{ id: 'direct-array-model' }]),
+        ['direct-array-model'],
+    );
+});
+
+test('lists models without requiring a configured model name', async () => {
+    const calls = [];
+    const models = await plugin._private.callListModels({
+        config: {
+            baseUrl: 'https://api.example.test/v1',
+            apiKey: 'sk-secret',
+            model: '',
+        },
+        fetchImpl: async (url, options) => {
+            calls.push({ url, options });
+            return {
+                ok: true,
+                json: async () => ({ data: [{ id: 'writer-a' }, { id: 'writer-b' }] }),
+            };
+        },
+    });
+
+    assert.deepEqual(models, ['writer-a', 'writer-b']);
+    assert.equal(calls[0].url, 'https://api.example.test/v1/models');
+    assert.equal(calls[0].options.method, 'GET');
+    assert.equal(calls[0].options.headers.Authorization, 'Bearer sk-secret');
+});
+
 test('redacts API keys from error messages', () => {
     assert.equal(
         plugin._private.redactSensitiveText('upstream rejected sk-secret for account', { apiKey: 'sk-secret' }),
@@ -91,6 +148,6 @@ test('registers settings and rewrite routes under the plugin router', async () =
 
     assert.deepEqual(
         routes.map(route => `${route.method} ${route.path}`),
-        ['GET /settings', 'POST /settings', 'POST /rewrite'],
+        ['GET /settings', 'POST /settings', 'POST /models', 'POST /rewrite'],
     );
 });

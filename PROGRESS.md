@@ -87,6 +87,7 @@
 - [x] 已修复旧 `reply_polisher.processed` 标记被 SillyTavern 复制到新 swipe 后导致自动/手动润色误判为无可处理回复的问题。
 - [x] 已修复 SillyTavern reasoning/其他后台处理在润色期间改动 `message.mes` 时被误判为用户编辑的问题：现在会基于最新内容重试一次，仅在聊天/消息/swipe 目标变化时中止。
 - [x] 已修复设置面板按钮中文标签因 SillyTavern 全局 `.menu_button { width: min-content; }` 导致竖排的问题。
+- [x] 已增加“获取模型列表”功能：服务端代理请求模型 B 的 OpenAI 兼容 `/models`，前端可拉取列表并选择模型名。
 - [x] 自动化端到端验证已完成（SillyTavern plugin-loader + 浏览器 harness）。真实安装后的手动验证仍需用户启用 server plugins 并配置模型 B。
 
 ## 验证记录
@@ -96,6 +97,7 @@
 - [x] `node --test tests\reply-polisher-ui-core.test.mjs`：8 项通过，覆盖旧处理标记、新 swipe、手动重新润色。
 - [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs`：12 项通过，覆盖后台内容变化后的重试提示和目标身份检查。
 - [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs tests\reply-polisher-server.test.mjs`：19 项通过，覆盖设置按钮横向排版。
+- [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-server.test.mjs tests\reply-polisher-ui-core.test.mjs`：22 项通过，覆盖模型列表 URL、模型 ID 提取、后端路由和前端设置入口。
 - [x] `node --check plugins\reply-polisher\index.js`：通过。
 - [x] `node --check public\scripts\extensions\third-party\reply-polisher\index.js`：通过。
 - [x] `node --check public\scripts\extensions\third-party\reply-polisher\core.js`：通过。
@@ -105,6 +107,7 @@
 - [x] 本机当前“花音”聊天文件验证：旧 `reply_polisher.processed` 标记不再阻止当前 active swipe 自动润色，手动查找可定位最新助手回复。
 - [x] 本机 SillyTavern 源码确认：`reasoning.js` 会在 `MESSAGE_RECEIVED`/`MESSAGE_UPDATED` 后解析 reasoning 并改写 `message.mes`，这是“未手动编辑但快照变化”的可能来源。
 - [x] 本机 SillyTavern HTTP 路由验证：`/scripts/extensions/third-party/reply-polisher/style.css` 已包含按钮 `fit-content` 和 `nowrap` 覆盖。
+- [x] 本机 SillyTavern 安装目录已同步模型列表功能，并已重启 SillyTavern 使新增 `/api/plugins/reply-polisher/models` 路由生效。
 - [ ] 真实 SillyTavern 浏览器 UI 中的设置面板显示、配置保存、自动重写和手动重写验证：仍需浏览器刷新后发送一次消息验证真实模型 B 调用。
 
 ## 后续工作注意事项

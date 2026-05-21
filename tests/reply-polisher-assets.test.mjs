@@ -8,6 +8,8 @@ test('settings UI is localized to Chinese', () => {
     assert.match(html, /启用/);
     assert.match(html, /自动润色/);
     assert.match(html, /模型 B/);
+    assert.match(html, /获取模型列表/);
+    assert.match(html, /选择模型/);
     assert.match(html, /保存模型设置/);
     assert.match(html, /润色最新回复/);
 });
@@ -31,6 +33,9 @@ test('settings action buttons keep Chinese labels horizontal', () => {
 test('runtime notifications explain rewrite progress in Chinese', () => {
     const script = fs.readFileSync('public/scripts/extensions/third-party/reply-polisher/index.js', 'utf8');
 
+    assert.match(script, /reply_polisher_load_models/);
+    assert.match(script, /\/models/);
+    assert.match(script, /已获取/);
     assert.match(script, /正在自动润色回复/);
     assert.match(script, /正在润色最新回复/);
     assert.match(script, /自动润色完成/);

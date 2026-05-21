@@ -57,6 +57,7 @@ function syncServerUi() {
     getElement('reply_polisher_api_key').value = '';
     getElement('reply_polisher_clear_api_key').checked = false;
     getElement('reply_polisher_key_status').textContent = serverSettings.hasApiKey ? 'API key 已保存' : '未保存 API key';
+    syncModelList([]);
 }
 
 function updateBehaviorSetting() {
@@ -67,6 +68,32 @@ function updateBehaviorSetting() {
     settings.maxTokens = readNumber('reply_polisher_max_tokens', settings.maxTokens);
     settings.timeoutMs = readNumber('reply_polisher_timeout_ms', settings.timeoutMs);
     context.saveSettingsDebounced();
+}
+
+function syncModelList(models) {
+    const select = getElement('reply_polisher_model_list');
+    if (!select) {
+        return;
+    }
+
+    const modelInput = getElement('reply_polisher_model');
+    const currentModel = modelInput?.value || '';
+    select.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = models.length > 0 ? '选择模型...' : '尚未获取模型列表';
+    select.append(placeholder);
+
+    for (const model of models) {
+        const option = document.createElement('option');
+        option.value = model;
+        option.textContent = model;
+        option.selected = model === currentModel;
+        select.append(option);
+    }
+
+    select.disabled = models.length === 0;
 }
 
 async function pluginFetch(path, options = {}) {
@@ -124,6 +151,44 @@ async function saveServerSettings() {
     } finally {
         setButtonBusy(button, false);
     }
+}
+
+async function loadModelList() {
+    const button = getElement('reply_polisher_load_models');
+    setButtonBusy(button, true);
+
+    try {
+        const result = await pluginFetch('/models', {
+            method: 'POST',
+            body: JSON.stringify({
+                baseUrl: getElement('reply_polisher_base_url').value,
+                apiKey: getElement('reply_polisher_api_key').value,
+                timeoutMs: settings.timeoutMs,
+            }),
+        });
+        const models = Array.isArray(result.models) ? result.models : [];
+        syncModelList(models);
+
+        if (models.length === 0) {
+            toastr.warning('未获取到模型列表。', 'Reply Polisher');
+            return;
+        }
+
+        toastr.success(`已获取 ${models.length} 个模型。`, 'Reply Polisher');
+    } catch (error) {
+        toastr.error(error.message, 'Reply Polisher');
+    } finally {
+        setButtonBusy(button, false);
+    }
+}
+
+function selectModelFromList() {
+    const value = getElement('reply_polisher_model_list').value;
+    if (!value) {
+        return;
+    }
+
+    getElement('reply_polisher_model').value = value;
 }
 
 async function testServerSettings() {
@@ -284,6 +349,8 @@ function bindUi() {
     }
 
     getElement('reply_polisher_save_connection').addEventListener('click', saveServerSettings);
+    getElement('reply_polisher_load_models').addEventListener('click', loadModelList);
+    getElement('reply_polisher_model_list').addEventListener('change', selectModelFromList);
     getElement('reply_polisher_test_connection').addEventListener('click', testServerSettings);
     getElement('reply_polisher_manual_rewrite').addEventListener('click', manualRewriteLatest);
 }

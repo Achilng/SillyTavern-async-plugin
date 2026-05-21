@@ -36,6 +36,11 @@
     white-space: nowrap;
 }
 
+.reply-polisher-model-picker select {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
 .reply-polisher-status {
     opacity: 0.8;
     font-size: 0.9em;

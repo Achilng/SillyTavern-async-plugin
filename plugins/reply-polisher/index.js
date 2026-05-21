@@ -104,6 +104,18 @@ function buildChatCompletionsUrl(baseUrl) {
     return `${normalized}/chat/completions`;
 }
 
+function buildModelsUrl(baseUrl) {
+    const trimmed = normalizeString(baseUrl).replace(/\/+$/, '');
+    if (!trimmed) {
+        throw new Error('Model B base URL is not configured.');
+    }
+
+    const normalized = trimmed
+        .replace(/\/chat\/completions$/i, '')
+        .replace(/\/models$/i, '');
+    return `${normalized}/models`;
+}
+
 function finiteNumber(value, fallback) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : fallback;
@@ -154,6 +166,19 @@ function extractRewriteText(data) {
     return text;
 }
 
+function extractModelIds(data) {
+    const entries = Array.isArray(data) ? data : data?.data;
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+
+    const ids = entries
+        .map(entry => normalizeString(entry?.id))
+        .filter(Boolean);
+
+    return Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b));
+}
+
 function redactSensitiveText(text, config = {}) {
     let message = normalizeString(text);
     const apiKey = typeof config.apiKey === 'string' ? config.apiKey : '';
@@ -165,7 +190,7 @@ function redactSensitiveText(text, config = {}) {
     return message;
 }
 
-function assertConfigured(config) {
+function assertModelConnectionConfigured(config) {
     if (!normalizeString(config.baseUrl)) {
         throw new Error('Model B base URL is not configured.');
     }
@@ -173,9 +198,57 @@ function assertConfigured(config) {
     if (!config.apiKey) {
         throw new Error('Model B API key is not configured.');
     }
+}
+
+function assertConfigured(config) {
+    assertModelConnectionConfigured(config);
 
     if (!normalizeString(config.model)) {
         throw new Error('Model B model is not configured.');
+    }
+}
+
+async function callListModels({ config, timeoutMs, fetchImpl = global.fetch }) {
+    assertModelConnectionConfigured(config);
+
+    if (typeof fetchImpl !== 'function') {
+        throw new Error('Fetch API is not available in this Node.js runtime.');
+    }
+
+    const controller = new AbortController();
+    const timeout = Math.max(1000, Math.floor(finiteNumber(timeoutMs, DEFAULT_REWRITE_OPTIONS.timeoutMs)));
+    const timeoutHandle = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetchImpl(buildModelsUrl(config.baseUrl), {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${config.apiKey}`,
+            },
+            signal: controller.signal,
+        });
+
+        let responseBody = null;
+        try {
+            responseBody = await response.json();
+        } catch {
+            responseBody = null;
+        }
+
+        if (!response.ok) {
+            const upstreamMessage = normalizeString(responseBody?.error?.message);
+            throw new Error(upstreamMessage || `Model B model list request failed with HTTP ${response.status}.`);
+        }
+
+        return extractModelIds(responseBody);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error(`Model B model list request timed out after ${timeout}ms.`);
+        }
+
+        throw error;
+    } finally {
+        clearTimeout(timeoutHandle);
     }
 }
 
@@ -250,6 +323,24 @@ async function init(router) {
         }
     });
 
+    router.post('/models', async (req, res) => {
+        const config = mergeSettings(loadConfig(), {
+            baseUrl: req.body?.baseUrl,
+            apiKey: req.body?.apiKey,
+        });
+
+        try {
+            const models = await callListModels({
+                config,
+                timeoutMs: req.body?.timeoutMs,
+            });
+
+            res.json({ models });
+        } catch (error) {
+            sendError(res, error, config);
+        }
+    });
+
     router.post('/rewrite', async (req, res) => {
         const config = loadConfig();
         try {
@@ -282,8 +373,11 @@ module.exports = {
         DEFAULT_CONFIG,
         DEFAULT_REWRITE_OPTIONS,
         buildChatCompletionsUrl,
+        buildModelsUrl,
         buildRewritePayload,
+        callListModels,
         callRewrite,
+        extractModelIds,
         extractRewriteText,
         loadConfig,
         mergeSettings,
