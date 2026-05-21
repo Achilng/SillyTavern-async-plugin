@@ -56,6 +56,23 @@ test('captures and validates the latest message snapshot', () => {
 
     context.chat[0].mes = 'edited';
     assert.equal(core.isSnapshotCurrent(context, snapshot), false);
+    assert.equal(core.isSnapshotTargetCurrent(context, snapshot), true);
+
+    context.chat[0].swipe_id = 2;
+    assert.equal(core.isSnapshotTargetCurrent(context, snapshot), false);
+});
+
+test('detects processed markers for the current text only', () => {
+    const message = {
+        mes: 'polished',
+        swipe_id: 1,
+        extra: { reply_polisher: { processed: true, swipeId: 1, textHash: core.getTextFingerprint('polished') } },
+    };
+
+    assert.equal(core.isMessageProcessedForCurrentText(message), true);
+
+    message.mes = 'changed by another handler';
+    assert.equal(core.isMessageProcessedForCurrentText(message), false);
 });
 
 test('applies rewrite in place and syncs active swipe metadata', () => {

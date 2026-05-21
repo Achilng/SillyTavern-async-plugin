@@ -26,5 +26,6 @@ test('runtime notifications explain rewrite progress in Chinese', () => {
     assert.match(script, /正在自动润色回复/);
     assert.match(script, /正在润色最新回复/);
     assert.match(script, /自动润色完成/);
+    assert.match(script, /正在基于最新内容重新润色/);
     assert.match(script, /服务器插件不可用/);
 });

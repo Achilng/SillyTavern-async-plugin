@@ -5,7 +5,8 @@ import {
     createMessageSnapshot,
     getLatestProcessableMessageId,
     getSettings,
-    isSnapshotCurrent,
+    isMessageProcessedForCurrentText,
+    isSnapshotTargetCurrent,
     runInBackground,
     shouldProcessEventType,
     shouldProcessMessage,
@@ -182,32 +183,52 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
         return;
     }
 
-    const snapshot = createMessageSnapshot(context, messageId);
     activeRewrites.add(key);
     toastr.info(manual ? '正在润色最新回复...' : '正在自动润色回复...', 'Reply Polisher');
 
     try {
-        const result = await pluginFetch('/rewrite', {
-            method: 'POST',
-            body: JSON.stringify(buildRewriteBody({
-                prompt,
-                text: snapshot.text,
-                temperature: settings.temperature,
-                maxTokens: settings.maxTokens,
-                timeoutMs: settings.timeoutMs,
-            })),
-        });
+        const maxAttempts = 2;
 
-        if (!isSnapshotCurrent(context, snapshot)) {
-            toastr.warning('重写完成前消息已变化，已保留原回复。', 'Reply Polisher');
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            const snapshot = createMessageSnapshot(context, messageId);
+            const result = await pluginFetch('/rewrite', {
+                method: 'POST',
+                body: JSON.stringify(buildRewriteBody({
+                    prompt,
+                    text: snapshot.text,
+                    temperature: settings.temperature,
+                    maxTokens: settings.maxTokens,
+                    timeoutMs: settings.timeoutMs,
+                })),
+            });
+
+            const currentMessage = getMessageById(messageId);
+            if (!isSnapshotTargetCurrent(context, snapshot)) {
+                toastr.warning('目标回复或 swipe 已变化，已保留当前回复。', 'Reply Polisher');
+                return;
+            }
+
+            if (currentMessage.mes !== snapshot.text) {
+                if (isMessageProcessedForCurrentText(currentMessage)) {
+                    return;
+                }
+
+                if (attempt < maxAttempts) {
+                    toastr.info('检测到回复内容刚刚变化，正在基于最新内容重新润色...', 'Reply Polisher');
+                    continue;
+                }
+
+                toastr.warning('回复在润色期间持续变化，已保留当前回复。', 'Reply Polisher');
+                return;
+            }
+
+            applyRewriteToMessage(currentMessage, result.text);
+            context.updateMessageBlock(messageId, currentMessage);
+            await context.saveChat();
+
+            toastr.success(manual ? '最新回复已润色。' : '自动润色完成。', 'Reply Polisher');
             return;
         }
-
-        applyRewriteToMessage(message, result.text);
-        context.updateMessageBlock(messageId, message);
-        await context.saveChat();
-
-        toastr.success(manual ? '最新回复已润色。' : '自动润色完成。', 'Reply Polisher');
     } catch (error) {
         toastr.error(error.message, 'Reply Polisher');
     } finally {

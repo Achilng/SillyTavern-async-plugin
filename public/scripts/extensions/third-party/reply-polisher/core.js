@@ -44,6 +44,14 @@ export function shouldProcessEventType(type) {
     return !SKIPPED_EVENT_TYPES.has(type);
 }
 
+export function isMessageProcessedForCurrentText(message) {
+    const marker = message?.extra?.reply_polisher;
+
+    return Boolean(marker?.processed
+        && marker.swipeId === message.swipe_id
+        && marker.textHash === getTextFingerprint(message.mes));
+}
+
 export function shouldProcessMessage(message, { allowProcessed = false } = {}) {
     if (!message || typeof message !== 'object') {
         return false;
@@ -53,12 +61,7 @@ export function shouldProcessMessage(message, { allowProcessed = false } = {}) {
         return false;
     }
 
-    const marker = message.extra?.reply_polisher;
-    const markerMatchesCurrentSwipe = marker?.processed
-        && marker.swipeId === message.swipe_id
-        && marker.textHash === getTextFingerprint(message.mes);
-
-    if (!allowProcessed && markerMatchesCurrentSwipe) {
+    if (!allowProcessed && isMessageProcessedForCurrentText(message)) {
         return false;
     }
 
@@ -80,12 +83,16 @@ export function createMessageSnapshot(context, messageId) {
 }
 
 export function isSnapshotCurrent(context, snapshot) {
+    return isSnapshotTargetCurrent(context, snapshot)
+        && context.chat?.[snapshot.messageId]?.mes === snapshot.text;
+}
+
+export function isSnapshotTargetCurrent(context, snapshot) {
     const message = context.chat?.[snapshot.messageId];
     const chatId = typeof context.getCurrentChatId === 'function' ? context.getCurrentChatId() : context.chatId;
 
     return Boolean(message)
         && chatId === snapshot.chatId
-        && message.mes === snapshot.text
         && message.swipe_id === snapshot.swipeId;
 }
 
