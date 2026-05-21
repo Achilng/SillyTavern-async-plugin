@@ -2,13 +2,13 @@
 
 ## 当前状态
 
-- 状态：代码实现和自动化验证已完成，尚未在真实 SillyTavern UI 中做端到端运行验证。
+- 状态：代码实现、自动化验证和本机 SillyTavern 安装目录同步已完成；真实模型 B 自动润色仍需在浏览器刷新后发送消息验证。
 - 工作区：当前仓库根目录位于 `D:\Agent\酒馆插件`。
 - 本次更新前已有的项目文件：`AGENTS.md`、`PLAN.md`、`PROGRESS.md`。
 - Git 状态：当前目录是 Git 仓库，分支 `main` 跟踪 `origin/main`。
 - 已定位本机 SillyTavern 安装目录：`D:\酒馆\chu\SillyTavern`。
 - 已确认本机 SillyTavern 版本：`1.14.0`。
-- 说明：未修改本机 SillyTavern 的 `config.yaml`；当前 `enableServerPlugins` 仍为 `false`。
+- 说明：本机 SillyTavern 的 `enableServerPlugins` 当前为 `true`。
 
 ## 用户已确认的决定
 
@@ -47,7 +47,7 @@
 - [x] 确认当前 SillyTavern 版本的准确服务器插件路由注册模式：`plugins/<id>/index.js` 导出 `init(router)` 和 `info`，路由自动挂载到 `/api/plugins/<id>`。
 - [x] 决定最终插件显示名称：`Reply Polisher`。
 - [x] 决定最终插件 ID：`reply-polisher`。
-- [ ] 在实际 SillyTavern 安装中启用 `config.yaml` 的 `enableServerPlugins: true`。当前本机值为 `false`，不得由 Agent 擅自修改。
+- [x] 在实际 SillyTavern 安装中启用 `config.yaml` 的 `enableServerPlugins: true`。当前本机值为 `true`。
 
 ## 已确认的 SillyTavern 1.14.0 集成点
 
@@ -82,17 +82,21 @@
 - [x] 前端设置 UI 已实现。
 - [x] 自动重写流程已实现。
 - [x] 手动重写按钮已实现。
+- [x] 自动重写改为后台执行，避免阻塞 SillyTavern 正常发送流程。
+- [x] 自动/手动润色增加运行中和完成提示。
 - [x] 自动化端到端验证已完成（SillyTavern plugin-loader + 浏览器 harness）。真实安装后的手动验证仍需用户启用 server plugins 并配置模型 B。
 
 ## 验证记录
 
 - [x] `node --test tests\reply-polisher-server.test.mjs tests\reply-polisher-ui-core.test.mjs`：11 项通过。
+- [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs tests\reply-polisher-server.test.mjs`：15 项通过。
 - [x] `node --check plugins\reply-polisher\index.js`：通过。
 - [x] `node --check public\scripts\extensions\third-party\reply-polisher\index.js`：通过。
 - [x] `node --check public\scripts\extensions\third-party\reply-polisher\core.js`：通过。
 - [x] SillyTavern 1.14.0 `src/plugin-loader.js` 真实加载验证：当前仓库 `plugins/reply-polisher` 被挂载到 `/api/plugins/reply-polisher`，包含 `GET /settings`、`POST /settings`、`POST /rewrite`。
 - [x] 临时浏览器 harness 验证：设置面板能挂载，`hasApiKey` 状态显示为 `API key saved`，手动重写只发送 `prompt`、`text`、`temperature`、`maxTokens`、`timeoutMs`，并原地更新消息和触发保存。
-- [ ] 真实 SillyTavern 浏览器 UI 中的设置面板显示、配置保存、自动重写和手动重写验证：未执行，因为需要安装到实际 SillyTavern 并启用 `enableServerPlugins`，且需要可用的模型 B API 配置。
+- [x] 本机 SillyTavern HTTP 路由验证：`/scripts/extensions/third-party/reply-polisher/index.js` 已包含运行提示文案，`/api/plugins/reply-polisher/settings` 返回 200 且 `hasApiKey: true`。
+- [ ] 真实 SillyTavern 浏览器 UI 中的设置面板显示、配置保存、自动重写和手动重写验证：仍需浏览器刷新后发送一次消息验证真实模型 B 调用。
 
 ## 后续工作注意事项
 

@@ -19,3 +19,12 @@ test('settings inputs use theme colors instead of white browser defaults', () =>
     assert.match(css, /background-color:\s*var\(--SmartThemeBlurTintColor/);
     assert.match(css, /color:\s*var\(--SmartThemeBodyColor/);
 });
+
+test('runtime notifications explain rewrite progress in Chinese', () => {
+    const script = fs.readFileSync('public/scripts/extensions/third-party/reply-polisher/index.js', 'utf8');
+
+    assert.match(script, /正在自动润色回复/);
+    assert.match(script, /正在润色最新回复/);
+    assert.match(script, /自动润色完成/);
+    assert.match(script, /服务器插件不可用/);
+});

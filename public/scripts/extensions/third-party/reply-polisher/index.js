@@ -55,7 +55,7 @@ function syncServerUi() {
     getElement('reply_polisher_model').value = serverSettings.model || '';
     getElement('reply_polisher_api_key').value = '';
     getElement('reply_polisher_clear_api_key').checked = false;
-    getElement('reply_polisher_key_status').textContent = serverSettings.hasApiKey ? 'API key saved' : 'No API key saved';
+    getElement('reply_polisher_key_status').textContent = serverSettings.hasApiKey ? 'API key 已保存' : '未保存 API key';
 }
 
 function updateBehaviorSetting() {
@@ -91,7 +91,7 @@ async function pluginFetch(path, options = {}) {
     }
 
     if (!response.ok) {
-        throw new Error(data?.error || `Reply Polisher request failed with HTTP ${response.status}.`);
+        throw new Error(data?.error || `Reply Polisher 请求失败，HTTP ${response.status}。`);
     }
 
     return data;
@@ -135,8 +135,8 @@ async function testServerSettings() {
         const result = await pluginFetch('/rewrite', {
             method: 'POST',
             body: JSON.stringify(buildRewriteBody({
-        prompt: settings.rewritePrompt || '清晰地返回所提供的文本。',
-        text: 'Reply Polisher 连接测试。',
+                prompt: settings.rewritePrompt || '清晰地返回所提供的文本。',
+                text: 'Reply Polisher 连接测试。',
                 temperature: settings.temperature,
                 maxTokens: Math.min(Number(settings.maxTokens) || 1024, 128),
                 timeoutMs: settings.timeoutMs,
@@ -184,6 +184,7 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
 
     const snapshot = createMessageSnapshot(context, messageId);
     activeRewrites.add(key);
+    toastr.info(manual ? '正在润色最新回复...' : '正在自动润色回复...', 'Reply Polisher');
 
     try {
         const result = await pluginFetch('/rewrite', {
@@ -206,9 +207,7 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
         context.updateMessageBlock(messageId, message);
         await context.saveChat();
 
-        if (manual) {
-            toastr.success('最新回复已润色。', 'Reply Polisher');
-        }
+        toastr.success(manual ? '最新回复已润色。' : '自动润色完成。', 'Reply Polisher');
     } catch (error) {
         toastr.error(error.message, 'Reply Polisher');
     } finally {
@@ -281,7 +280,7 @@ async function initExtension() {
     try {
         await loadServerSettings();
     } catch (error) {
-        getElement('reply_polisher_key_status').textContent = 'Server plugin unavailable';
+        getElement('reply_polisher_key_status').textContent = '服务器插件不可用';
         console.warn(`[${MODULE_NAME}] Failed to load server settings:`, error);
     }
 
