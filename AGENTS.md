@@ -21,5 +21,5 @@
 - SillyTavern Server Plugins：<https://docs.sillytavern.app/for-contributors/server-plugins/>，用于参考后端插件结构、Express 路由注册、服务端 API 调用和敏感配置处理。
 
 ## 项目文档
-- `PLAN.md` 是本地开发实施计划书，不随仓库上传；如果本地存在，应先阅读后再写代码。
-- `PROGRESS.md` 是本地开发进度记录，不随仓库上传；如果本地存在，应先阅读并在需要时更新。此文档应当频繁更新。
+- `PLAN.md` 是开发实施计划书，应随仓库上传和维护；写代码前应先阅读。
+- `PROGRESS.md` 是开发进度记录，应随仓库上传和维护；写代码前应先阅读并在需要时更新。此文档应当频繁更新。
