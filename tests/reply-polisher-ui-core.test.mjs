@@ -75,3 +75,17 @@ test('builds rewrite body without chat context fields', () => {
     assert.equal(Object.hasOwn(body, 'history'), false);
     assert.equal(Object.hasOwn(body, 'character'), false);
 });
+
+test('runs asynchronous work without returning a blocking promise', async () => {
+    let completed = false;
+    const returned = core.runInBackground(
+        Promise.resolve().then(() => {
+            completed = true;
+        }),
+        () => {},
+    );
+
+    assert.equal(returned, undefined);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(completed, true);
+});

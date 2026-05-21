@@ -112,6 +112,10 @@ export function buildRewriteBody({ prompt, text, temperature, maxTokens, timeout
     };
 }
 
+export function runInBackground(work, onError = console.error) {
+    Promise.resolve(work).catch(onError);
+}
+
 export function getLatestProcessableMessageId(context) {
     const chat = Array.isArray(context.chat) ? context.chat : [];
     for (let i = chat.length - 1; i >= 0; i -= 1) {

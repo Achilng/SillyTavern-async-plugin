@@ -36,6 +36,24 @@
     font-size: 0.9em;
 }
 
+#reply_polisher_settings input,
+#reply_polisher_settings textarea,
+#reply_polisher_settings select {
+    background-color: var(--SmartThemeBlurTintColor);
+    color: var(--SmartThemeBodyColor);
+    border-color: var(--SmartThemeBorderColor);
+}
+
+#reply_polisher_settings input::placeholder,
+#reply_polisher_settings textarea::placeholder {
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.55;
+}
+
+#reply_polisher_settings input[type="checkbox"] {
+    color: initial;
+}
+
 #reply_polisher_prompt {
     min-height: 8em;
     resize: vertical;

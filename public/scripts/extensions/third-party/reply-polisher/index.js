@@ -6,6 +6,7 @@ import {
     getLatestProcessableMessageId,
     getSettings,
     isSnapshotCurrent,
+    runInBackground,
     shouldProcessEventType,
     shouldProcessMessage,
 } from './core.js';
@@ -116,7 +117,7 @@ async function saveServerSettings() {
             }),
         });
         syncServerUi();
-        toastr.success('Model B settings saved.', 'Reply Polisher');
+        toastr.success('模型 B 设置已保存。', 'Reply Polisher');
     } catch (error) {
         toastr.error(error.message, 'Reply Polisher');
     } finally {
@@ -134,15 +135,15 @@ async function testServerSettings() {
         const result = await pluginFetch('/rewrite', {
             method: 'POST',
             body: JSON.stringify(buildRewriteBody({
-                prompt: settings.rewritePrompt || 'Return the provided text clearly.',
-                text: 'Reply Polisher connection test.',
+        prompt: settings.rewritePrompt || '清晰地返回所提供的文本。',
+        text: 'Reply Polisher 连接测试。',
                 temperature: settings.temperature,
                 maxTokens: Math.min(Number(settings.maxTokens) || 1024, 128),
                 timeoutMs: settings.timeoutMs,
             })),
         });
 
-        toastr.success(result.text ? 'Model B responded.' : 'Model B returned a response.', 'Reply Polisher');
+        toastr.success(result.text ? '模型 B 已响应。' : '模型 B 返回了响应。', 'Reply Polisher');
     } catch (error) {
         toastr.error(error.message, 'Reply Polisher');
     } finally {
@@ -176,7 +177,7 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
     const prompt = settings.rewritePrompt?.trim();
     if (!prompt) {
         if (manual) {
-            toastr.warning('Rewrite prompt is empty.', 'Reply Polisher');
+            toastr.warning('改写提示词为空。', 'Reply Polisher');
         }
         return;
     }
@@ -197,7 +198,7 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
         });
 
         if (!isSnapshotCurrent(context, snapshot)) {
-            toastr.warning('Message changed before rewrite finished. Original reply was kept.', 'Reply Polisher');
+            toastr.warning('重写完成前消息已变化，已保留原回复。', 'Reply Polisher');
             return;
         }
 
@@ -206,7 +207,7 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
         await context.saveChat();
 
         if (manual) {
-            toastr.success('Latest reply rewritten.', 'Reply Polisher');
+            toastr.success('最新回复已润色。', 'Reply Polisher');
         }
     } catch (error) {
         toastr.error(error.message, 'Reply Polisher');
@@ -215,22 +216,26 @@ async function rewriteMessage(messageId, { manual = false, type = undefined } = 
     }
 }
 
-async function handleRenderedMessage(messageId, type) {
+function handleRenderedMessage(messageId, type) {
     const numericMessageId = Number(messageId);
     if (!Number.isInteger(numericMessageId)) {
         return;
     }
 
-    await rewriteMessage(numericMessageId, { type });
+    runInBackground(rewriteMessage(numericMessageId, { type }), error => {
+        console.error(`[${MODULE_NAME}] Auto rewrite failed:`, error);
+    });
 }
 
-async function handleSwipedMessage(messageId) {
+function handleSwipedMessage(messageId) {
     const numericMessageId = Number(messageId);
     if (!Number.isInteger(numericMessageId)) {
         return;
     }
 
-    await rewriteMessage(numericMessageId, { type: 'swipe' });
+    runInBackground(rewriteMessage(numericMessageId, { type: 'swipe' }), error => {
+        console.error(`[${MODULE_NAME}] Swipe rewrite failed:`, error);
+    });
 }
 
 async function manualRewriteLatest() {
@@ -238,7 +243,7 @@ async function manualRewriteLatest() {
 
     const messageId = getLatestProcessableMessageId(context);
     if (messageId < 0) {
-        toastr.warning('No assistant reply is available to rewrite.', 'Reply Polisher');
+        toastr.warning('没有可润色的助手回复。', 'Reply Polisher');
         return;
     }
 
