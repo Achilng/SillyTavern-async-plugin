@@ -1,0 +1,9 @@
+# Local agent planning/tracking files
+PLAN.md
+PROGRESS.md
+
+# Local environment and secrets
+.env
+.env.*
+plugins/**/config.json
+!plugins/**/config.example.json
