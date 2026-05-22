@@ -18,6 +18,7 @@ const EXTENSION_FOLDER = new URL('.', import.meta.url).pathname
     .replace(/\/$/, '');
 const API_BASE = '/api/plugins/reply-polisher';
 const RUNTIME_KEY = '__replyPolisherRuntime';
+const SERVER_PLUGIN_UNAVAILABLE_MESSAGE = 'Reply Polisher 服务端插件不可用或版本过旧：请确认已安装最新服务端插件，已设置 enableServerPlugins: true，并重启 SillyTavern。';
 
 const runtime = window[RUNTIME_KEY] || {
     activeRewrites: new Set(),
@@ -55,6 +56,24 @@ function setButtonBusy(button, busy) {
 function readNumber(id, fallback) {
     const value = Number(getElement(id)?.value);
     return Number.isFinite(value) ? value : fallback;
+}
+
+function getConnectionFormSettings() {
+    return {
+        baseUrl: getElement('reply_polisher_base_url').value,
+        model: getElement('reply_polisher_model').value,
+        apiKey: getElement('reply_polisher_api_key').value,
+        clearApiKey: getElement('reply_polisher_clear_api_key').checked,
+    };
+}
+
+function hasUnsavedConnectionInput() {
+    const connection = getConnectionFormSettings();
+
+    return connection.baseUrl.trim() !== (serverSettings.baseUrl || '')
+        || connection.model.trim() !== (serverSettings.model || '')
+        || connection.apiKey.length > 0
+        || connection.clearApiKey;
 }
 
 function syncBehaviorUi() {
@@ -121,20 +140,32 @@ async function pluginFetch(path, options = {}) {
         headers['Content-Type'] = 'application/json';
     }
 
-    const response = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers,
-    });
+    let response;
+    try {
+        response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers,
+        });
+    } catch (error) {
+        throw new Error(`无法访问 Reply Polisher 服务端插件：${error.message}`);
+    }
 
     let data = null;
+    let responseText = '';
     try {
-        data = await response.json();
+        responseText = await response.text();
+        data = responseText ? JSON.parse(responseText) : null;
     } catch {
         data = null;
     }
 
     if (!response.ok) {
-        throw new Error(data?.error || `Reply Polisher 请求失败，HTTP ${response.status}。`);
+        if (response.status === 404) {
+            throw new Error(SERVER_PLUGIN_UNAVAILABLE_MESSAGE);
+        }
+
+        const fallbackText = responseText.replace(/\s+/g, ' ').trim().slice(0, 200);
+        throw new Error(data?.error || fallbackText || `Reply Polisher 请求失败，HTTP ${response.status}。`);
     }
 
     return data;
@@ -152,12 +183,7 @@ async function saveServerSettings() {
     try {
         serverSettings = await pluginFetch('/settings', {
             method: 'POST',
-            body: JSON.stringify({
-                baseUrl: getElement('reply_polisher_base_url').value,
-                model: getElement('reply_polisher_model').value,
-                apiKey: getElement('reply_polisher_api_key').value,
-                clearApiKey: getElement('reply_polisher_clear_api_key').checked,
-            }),
+            body: JSON.stringify(getConnectionFormSettings()),
         });
         syncServerUi();
         toastr.success('模型 B 设置已保存。', 'Reply Polisher');
@@ -178,6 +204,7 @@ async function loadModelList() {
             body: JSON.stringify({
                 baseUrl: getElement('reply_polisher_base_url').value,
                 apiKey: getElement('reply_polisher_api_key').value,
+                clearApiKey: getElement('reply_polisher_clear_api_key').checked,
                 timeoutMs: settings.timeoutMs,
             }),
         });
@@ -213,18 +240,25 @@ async function testServerSettings() {
     setButtonBusy(button, true);
 
     try {
-        const result = await pluginFetch('/rewrite', {
+        const connection = getConnectionFormSettings();
+        const result = await pluginFetch('/test', {
             method: 'POST',
-            body: JSON.stringify(buildRewriteBody({
-                prompt: settings.rewritePrompt || '清晰地返回所提供的文本。',
-                text: 'Reply Polisher 连接测试。',
-                temperature: settings.temperature,
-                maxTokens: Math.min(Number(settings.maxTokens) || 1024, 128),
-                timeoutMs: settings.timeoutMs,
-            })),
+            body: JSON.stringify({
+                ...buildRewriteBody({
+                    prompt: settings.rewritePrompt || '清晰地返回所提供的文本。',
+                    text: 'Reply Polisher 连接测试。',
+                    temperature: settings.temperature,
+                    maxTokens: Math.min(Number(settings.maxTokens) || 1024, 128),
+                    timeoutMs: settings.timeoutMs,
+                }),
+                ...connection,
+            }),
         });
 
-        toastr.success(result.text ? '模型 B 已响应。' : '模型 B 返回了响应。', 'Reply Polisher');
+        const message = result.text && hasUnsavedConnectionInput()
+            ? '模型 B 已响应。请保存模型设置后再自动润色。'
+            : '模型 B 已响应。';
+        toastr.success(message, 'Reply Polisher');
     } catch (error) {
         toastr.error(error.message, 'Reply Polisher');
     } finally {
@@ -493,7 +527,9 @@ async function initExtension() {
     try {
         await loadServerSettings();
     } catch (error) {
-        getElement('reply_polisher_key_status').textContent = '服务器插件不可用';
+        const status = getElement('reply_polisher_key_status');
+        status.textContent = '服务器插件不可用';
+        status.title = error.message;
         console.warn(`[${MODULE_NAME}] Failed to load server settings:`, error);
     }
 

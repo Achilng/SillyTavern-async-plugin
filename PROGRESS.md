@@ -139,3 +139,20 @@
 - 如果实现需要许多临时文件，请将它们放在 `D:\Agent\Agent_temp` 下。
 - 如果需要删除两个以上文件，请先询问用户。
 - 对于任何会修改文件的任务，最终回复中需要列出已更改的文件。
+
+## 2026-05-22 404 连接问题排查
+
+- 用户反馈朋友使用相同 URL/key 时连接模型失败，补充错误码为 404。
+- 已定位：404 表示 UI 扩展请求的 `/api/plugins/reply-polisher/...` 服务端路由不存在，通常是只安装了 GitHub URL UI 扩展，未安装/启用/重启 SillyTavern server plugin，或服务端插件版本过旧。
+- 已调整前端 404 提示：明确提示安装最新服务端插件、设置 `enableServerPlugins: true` 并重启 SillyTavern。
+- 已新增 `POST /test` 服务端路由，让“测试模型”验证当前表单中的 base URL、API key 和 model，而不是只验证旧的已保存配置。
+- 已调整服务端出站请求优先使用 SillyTavern 依赖中的 `node-fetch`，以便更好地继承 SillyTavern 的 `requestProxy` 网络设置。
+- 已验证：`node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs tests\reply-polisher-server.test.mjs` 27 项通过；`node --check` 覆盖根 UI、public UI、server plugin 和 plugins 副本。
+
+## 2026-05-22 Server Plugin 安装脚本
+
+- 已新增 `install-server-plugin.sh`，可通过 `bash install-server-plugin.sh ...` 在 Windows Git Bash 和 Termux Bash 中运行。
+- 脚本会把仓库 `server/` 目录内容复制到目标 `SillyTavern/plugins/reply-polisher/`。
+- 脚本支持位置参数或 `SILLYTAVERN_DIR` 环境变量，并在 Git Bash 下使用 `cygpath` 兼容 Windows 路径。
+- 脚本不会自动修改 `config.yaml`，只检查并提示 `enableServerPlugins: true` 和重启 SillyTavern。
+- 已验证：Git Bash `bash -n install-server-plugin.sh` 通过；使用 `D:\Agent\Agent_temp\reply-polisher-install-test` 假 SillyTavern 目录完成安装演练；完整 Node 测试 28 项通过。

@@ -35,7 +35,9 @@ test('runtime notifications explain rewrite progress in Chinese', () => {
 
     assert.match(script, /reply_polisher_load_models/);
     assert.match(script, /\/models/);
+    assert.match(script, /\/test/);
     assert.match(script, /已获取/);
+    assert.match(script, /服务端插件不可用/);
     assert.match(script, /正在润色\$\{attemptId\}/);
     assert.match(script, /成功\$\{attemptId\}/);
     assert.match(script, /失败\$\{attemptId\}/);
@@ -67,10 +69,22 @@ test('repository root is installable as a SillyTavern URL extension', () => {
     const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 
     assert.equal(manifest.display_name, 'Reply Polisher');
-    assert.equal(manifest.js, 'index.js?v=0.1.1');
+    assert.equal(manifest.js, 'index.js?v=0.1.2');
     assert.equal(fs.existsSync('index.js'), true);
     assert.equal(fs.existsSync('core.js'), true);
     assert.equal(fs.existsSync('settings.html'), true);
     assert.equal(fs.existsSync('style.css'), true);
     assert.match(fs.readFileSync('README.md', 'utf8'), /https:\/\/github\.com\/Achilng\/SillyTavern-async-plugin\.git/);
+});
+
+test('server plugin installer script is present and documented', () => {
+    const script = fs.readFileSync('install-server-plugin.sh', 'utf8');
+    const readme = fs.readFileSync('README.md', 'utf8');
+
+    assert.match(script, /^#!\/usr\/bin\/env bash/);
+    assert.match(script, /SILLYTAVERN_DIR/);
+    assert.match(script, /cygpath/);
+    assert.match(script, /plugins\/\$\{PLUGIN_ID\}/);
+    assert.match(script, /enableServerPlugins/);
+    assert.match(readme, /install-server-plugin\.sh/);
 });

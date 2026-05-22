@@ -20,10 +20,22 @@ SillyTavern installs Git URL extensions from the repository root, so this reposi
 
 ## Install Server Plugin
 
-The UI extension needs the server plugin because Model B API keys must stay server-side. SillyTavern's URL extension installer does not install server plugins, so copy the bundled `server` folder to:
+The UI extension needs the server plugin because Model B API keys must stay server-side. SillyTavern's URL extension installer does not install server plugins, so create this folder and copy the contents of the bundled `server` folder into it:
 
 ```text
 SillyTavern/plugins/reply-polisher
+```
+
+You can also install it with the Bash helper script after cloning this repository:
+
+```bash
+bash install-server-plugin.sh /path/to/SillyTavern
+```
+
+Windows Git Bash accepts quoted Windows paths:
+
+```bash
+bash install-server-plugin.sh "D:\path\to\SillyTavern"
 ```
 
 Then create `config.json` from `config.example.json`, or configure Model B from the Reply Polisher settings panel. Ensure SillyTavern has:
@@ -33,6 +45,16 @@ enableServerPlugins: true
 ```
 
 Restart SillyTavern after installing or updating the server plugin.
+
+## Troubleshooting 404
+
+If the Reply Polisher settings panel or test button reports HTTP 404, the UI extension is installed but the server plugin route is missing or outdated. Check these three items on the SillyTavern machine that is running the server:
+
+1. `SillyTavern/plugins/reply-polisher/index.js` exists.
+2. `config.yaml` has `enableServerPlugins: true`.
+3. The latest server plugin files were copied in, then SillyTavern was restarted.
+
+Installing from the GitHub URL only installs the UI extension. It does not install the server plugin.
 
 ## Behavior
 

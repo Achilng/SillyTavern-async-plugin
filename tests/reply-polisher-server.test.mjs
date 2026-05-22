@@ -184,6 +184,6 @@ test('registers settings and rewrite routes under the plugin router', async () =
 
     assert.deepEqual(
         routes.map(route => `${route.method} ${route.path}`),
-        ['GET /settings', 'POST /settings', 'POST /models', 'POST /rewrite'],
+        ['GET /settings', 'POST /settings', 'POST /models', 'POST /test', 'POST /rewrite'],
     );
 });

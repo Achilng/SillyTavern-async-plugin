@@ -18,6 +18,7 @@ const DEFAULT_REWRITE_OPTIONS = Object.freeze({
 
 const SYSTEM_PROMPT = 'You rewrite only the provided text. Do not continue the conversation. Do not add explanations.';
 const inFlightRewrites = new Map();
+let defaultFetchPromise = null;
 
 const info = {
     id: PLUGIN_ID,
@@ -202,6 +203,35 @@ function redactSensitiveText(text, config = {}) {
     return message;
 }
 
+function getDefaultFetch() {
+    if (!defaultFetchPromise) {
+        defaultFetchPromise = import('node-fetch')
+            .then(module => module.default || module)
+            .catch(error => {
+                if (typeof globalThis.fetch === 'function') {
+                    return globalThis.fetch.bind(globalThis);
+                }
+
+                throw new Error(`Fetch API is not available in this Node.js runtime. node-fetch could not be loaded: ${error.message}`);
+            });
+    }
+
+    return defaultFetchPromise;
+}
+
+async function resolveFetch(fetchImpl) {
+    if (typeof fetchImpl === 'function') {
+        return fetchImpl;
+    }
+
+    const fetchClient = await getDefaultFetch();
+    if (typeof fetchClient !== 'function') {
+        throw new Error('Fetch API is not available in this Node.js runtime.');
+    }
+
+    return fetchClient;
+}
+
 function assertModelConnectionConfigured(config) {
     if (!normalizeString(config.baseUrl)) {
         throw new Error('Model B base URL is not configured.');
@@ -220,19 +250,16 @@ function assertConfigured(config) {
     }
 }
 
-async function callListModels({ config, timeoutMs, fetchImpl = global.fetch }) {
+async function callListModels({ config, timeoutMs, fetchImpl }) {
     assertModelConnectionConfigured(config);
 
-    if (typeof fetchImpl !== 'function') {
-        throw new Error('Fetch API is not available in this Node.js runtime.');
-    }
-
+    const fetchClient = await resolveFetch(fetchImpl);
     const controller = new AbortController();
     const timeout = Math.max(1000, Math.floor(finiteNumber(timeoutMs, DEFAULT_REWRITE_OPTIONS.timeoutMs)));
     const timeoutHandle = setTimeout(() => controller.abort(), timeout);
 
     try {
-        const response = await fetchImpl(buildModelsUrl(config.baseUrl), {
+        const response = await fetchClient(buildModelsUrl(config.baseUrl), {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${config.apiKey}`,
@@ -264,19 +291,16 @@ async function callListModels({ config, timeoutMs, fetchImpl = global.fetch }) {
     }
 }
 
-async function callRewrite({ config, prompt, text, temperature, maxTokens, timeoutMs, fetchImpl = global.fetch }) {
+async function callRewrite({ config, prompt, text, temperature, maxTokens, timeoutMs, fetchImpl }) {
     assertConfigured(config);
 
-    if (typeof fetchImpl !== 'function') {
-        throw new Error('Fetch API is not available in this Node.js runtime.');
-    }
-
+    const fetchClient = await resolveFetch(fetchImpl);
     const controller = new AbortController();
     const timeout = Math.max(1000, Math.floor(finiteNumber(timeoutMs, DEFAULT_REWRITE_OPTIONS.timeoutMs)));
     const timeoutHandle = setTimeout(() => controller.abort(), timeout);
 
     try {
-        const response = await fetchImpl(buildChatCompletionsUrl(config.baseUrl), {
+        const response = await fetchClient(buildChatCompletionsUrl(config.baseUrl), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -355,6 +379,7 @@ async function init(router) {
         const config = mergeSettings(loadConfig(), {
             baseUrl: req.body?.baseUrl,
             apiKey: req.body?.apiKey,
+            clearApiKey: req.body?.clearApiKey,
         });
 
         try {
@@ -364,6 +389,30 @@ async function init(router) {
             });
 
             res.json({ models });
+        } catch (error) {
+            sendError(res, error, config);
+        }
+    });
+
+    router.post('/test', async (req, res) => {
+        const config = mergeSettings(loadConfig(), {
+            baseUrl: req.body?.baseUrl,
+            apiKey: req.body?.apiKey,
+            model: req.body?.model,
+            clearApiKey: req.body?.clearApiKey,
+        });
+
+        try {
+            const rewrite = await callRewrite({
+                config,
+                prompt: req.body?.prompt,
+                text: req.body?.text,
+                temperature: req.body?.temperature,
+                maxTokens: req.body?.maxTokens,
+                timeoutMs: req.body?.timeoutMs,
+            });
+
+            res.json({ text: rewrite });
         } catch (error) {
             sendError(res, error, config);
         }
@@ -408,9 +457,11 @@ module.exports = {
         callRewriteDeduped,
         extractModelIds,
         extractRewriteText,
+        getDefaultFetch,
         loadConfig,
         mergeSettings,
         redactSensitiveText,
+        resolveFetch,
         sanitizeSettings,
         saveConfig,
     },
