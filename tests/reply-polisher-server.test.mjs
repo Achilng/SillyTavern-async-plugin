@@ -133,6 +133,42 @@ test('redacts API keys from error messages', () => {
     );
 });
 
+test('deduplicates concurrent identical rewrite requests', async () => {
+    let fetchCalls = 0;
+    let releaseFetch;
+    const fetchGate = new Promise(resolve => {
+        releaseFetch = resolve;
+    });
+    const args = {
+        config: {
+            baseUrl: 'https://api.example.test/v1',
+            apiKey: 'sk-secret',
+            model: 'writer-model',
+        },
+        prompt: 'Polish it.',
+        text: 'Original reply.',
+        temperature: 0.7,
+        maxTokens: 256,
+        fetchImpl: async () => {
+            fetchCalls += 1;
+            await fetchGate;
+            return {
+                ok: true,
+                json: async () => ({ choices: [{ message: { content: 'Polished reply.' } }] }),
+            };
+        },
+    };
+    const cache = new Map();
+
+    const first = plugin._private.callRewriteDeduped(args, cache);
+    const second = plugin._private.callRewriteDeduped(args, cache);
+    releaseFetch();
+
+    assert.deepEqual(await Promise.all([first, second]), ['Polished reply.', 'Polished reply.']);
+    assert.equal(fetchCalls, 1);
+    assert.equal(cache.size, 0);
+});
+
 test('registers settings and rewrite routes under the plugin router', async () => {
     const routes = [];
     const router = {

@@ -62,6 +62,29 @@ test('captures and validates the latest message snapshot', () => {
     assert.equal(core.isSnapshotTargetCurrent(context, snapshot), false);
 });
 
+test('message identity detects whether generation produced a new target', () => {
+    const context = {
+        getCurrentChatId: () => 'chat-a',
+        chat: [{
+            mes: 'old reply',
+            swipe_id: 0,
+            send_date: '2026-05-22T10:00:00',
+            gen_finished: '2026-05-22T10:00:01',
+        }],
+    };
+
+    const before = core.createMessageIdentity(context, 0);
+    const same = core.createMessageIdentity(context, 0);
+
+    assert.equal(core.isSameMessageIdentity(before, same), true);
+
+    context.chat[0].mes = 'regenerated reply';
+    context.chat[0].gen_finished = '2026-05-22T10:01:01';
+
+    const after = core.createMessageIdentity(context, 0);
+    assert.equal(core.isSameMessageIdentity(before, after), false);
+});
+
 test('detects processed markers for the current text only', () => {
     const message = {
         mes: 'polished',

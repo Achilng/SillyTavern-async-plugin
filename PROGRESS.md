@@ -89,6 +89,19 @@
 - [x] 已修复设置面板按钮中文标签因 SillyTavern 全局 `.menu_button { width: min-content; }` 导致竖排的问题。
 - [x] 已增加“获取模型列表”功能：服务端代理请求模型 B 的 OpenAI 兼容 `/models`，前端可拉取列表并选择模型名。
 - [x] 自动化端到端验证已完成（SillyTavern plugin-loader + 浏览器 harness）。真实安装后的手动验证仍需用户启用 server plugins 并配置模型 B。
+- [x] 已修复自动润色触发时机：从直接监听消息渲染/swipe 事件改为 `MESSAGE_RECEIVED` + `CHARACTER_MESSAGE_RENDERED` 双门槛处理，并使用生成开始前的最新助手回复身份避免失败生成误处理旧消息。
+- [x] 已移除自动润色的二次模型 B 调用重试；每次生成完成只尝试一次，失败或目标内容变化时保留原文并返回。
+- [x] 已将修复后的 UI 扩展文件同步到本机 SillyTavern 安装目录：`D:\酒馆\chu\SillyTavern\public\scripts\extensions\third-party\reply-polisher`。
+- [x] 已确认 `GENERATION_ENDED` 在 SillyTavern 1.14.0 中由 `hideStopButton()` 触发，swipe 开始时也可能出现，因此不再用它发起自动润色。
+- [x] 已增加全局运行锁 `window.__replyPolisherRuntime`，避免同一页面中重复加载的扩展实例同时调用模型 B。
+- [x] 已为每次真实润色请求增加编号提示：`正在润色N`、`成功N`、`失败N`。
+- [x] 已在服务器 `/rewrite` 路由增加同内容并发请求合并，避免重复前端实例把同一文本同时送到模型 B。
+- [x] UI 扩展版本提升到 `0.1.1`，并给 manifest 的 JS 路径增加查询版本，降低浏览器继续加载旧 `index.js` 的概率。
+- [x] 已定位无编号弹窗来源：本机 SillyTavern 用户扩展目录存在旧副本 `data\default-user\extensions\SillyTavern-Rewrite-Extension`，其 manifest 同名 `Reply Polisher`，版本 `0.1.0`，仍监听 `CHARACTER_MESSAGE_RENDERED` 和 `MESSAGE_SWIPED`。
+- [x] 已将旧副本移出 SillyTavern 扩展目录并备份到 `D:\Agent\Agent_temp\removed-SillyTavern-Rewrite-Extension-20260522-191604`，当前 SillyTavern 只剩 `public\scripts\extensions\third-party\reply-polisher` 这一份 `Reply Polisher`。
+- [x] 已将 UI 扩展文件复制到仓库根目录，使 GitHub URL 安装时能直接找到 `manifest.json`。
+- [x] 已将前端模板路径改为从 `import.meta.url` 动态解析，兼容 URL 安装后的目录名 `SillyTavern-async-plugin`。
+- [x] 已在仓库根目录增加 `README.md`，说明 URL 安装地址和服务器插件安装限制。
 
 ## 验证记录
 
@@ -108,6 +121,14 @@
 - [x] 本机 SillyTavern 源码确认：`reasoning.js` 会在 `MESSAGE_RECEIVED`/`MESSAGE_UPDATED` 后解析 reasoning 并改写 `message.mes`，这是“未手动编辑但快照变化”的可能来源。
 - [x] 本机 SillyTavern HTTP 路由验证：`/scripts/extensions/third-party/reply-polisher/style.css` 已包含按钮 `fit-content` 和 `nowrap` 覆盖。
 - [x] 本机 SillyTavern 安装目录已同步模型列表功能，并已重启 SillyTavern 使新增 `/api/plugins/reply-polisher/models` 路由生效。
+- [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs tests\reply-polisher-server.test.mjs`：26 项通过，覆盖编号提示、全局锁、收到并渲染同一条生成消息后触发、移除 `GENERATION_ENDED`/`MESSAGE_SWIPED` 自动触发、移除二次重试和后端并发合并。
+- [x] `node --check public\scripts\extensions\third-party\reply-polisher\index.js`：通过。
+- [x] `node --check public\scripts\extensions\third-party\reply-polisher\core.js`：通过。
+- [x] `node --check plugins\reply-polisher\index.js`：通过。
+- [x] `node --test tests\reply-polisher-assets.test.mjs tests\reply-polisher-ui-core.test.mjs tests\reply-polisher-server.test.mjs`：27 项通过，新增覆盖仓库根目录可作为 SillyTavern URL 扩展安装。
+- [x] `node --check index.js`：通过。
+- [x] `node --check core.js`：通过。
+- [x] `node --check server\index.js`：通过。
 - [ ] 真实 SillyTavern 浏览器 UI 中的设置面板显示、配置保存、自动重写和手动重写验证：仍需浏览器刷新后发送一次消息验证真实模型 B 调用。
 
 ## 后续工作注意事项

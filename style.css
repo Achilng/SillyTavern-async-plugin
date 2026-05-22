@@ -1,0 +1,70 @@
+.reply-polisher-settings .inline-drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reply-polisher-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+.reply-polisher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+}
+
+.reply-polisher-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.reply-polisher-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reply-polisher-actions .menu_button {
+    width: fit-content;
+    white-space: nowrap;
+}
+
+.reply-polisher-model-picker select {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.reply-polisher-status {
+    opacity: 0.8;
+    font-size: 0.9em;
+}
+
+#reply_polisher_settings input,
+#reply_polisher_settings textarea,
+#reply_polisher_settings select {
+    background-color: var(--SmartThemeBlurTintColor);
+    color: var(--SmartThemeBodyColor);
+    border-color: var(--SmartThemeBorderColor);
+}
+
+#reply_polisher_settings input::placeholder,
+#reply_polisher_settings textarea::placeholder {
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.55;
+}
+
+#reply_polisher_settings input[type="checkbox"] {
+    color: initial;
+}
+
+#reply_polisher_prompt {
+    min-height: 8em;
+    resize: vertical;
+}

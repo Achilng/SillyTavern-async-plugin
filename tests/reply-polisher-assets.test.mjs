@@ -36,9 +36,41 @@ test('runtime notifications explain rewrite progress in Chinese', () => {
     assert.match(script, /reply_polisher_load_models/);
     assert.match(script, /\/models/);
     assert.match(script, /已获取/);
-    assert.match(script, /正在自动润色回复/);
-    assert.match(script, /正在润色最新回复/);
-    assert.match(script, /自动润色完成/);
-    assert.match(script, /正在基于最新内容重新润色/);
+    assert.match(script, /正在润色\$\{attemptId\}/);
+    assert.match(script, /成功\$\{attemptId\}/);
+    assert.match(script, /失败\$\{attemptId\}/);
+    assert.match(script, /回复在润色期间已变化/);
     assert.match(script, /服务器插件不可用/);
+});
+
+test('runtime uses a shared global lock across duplicate extension instances', () => {
+    const script = fs.readFileSync('public/scripts/extensions/third-party/reply-polisher/index.js', 'utf8');
+
+    assert.match(script, /__replyPolisherRuntime/);
+    assert.match(script, /runtime\.activeRewrites/);
+    assert.match(script, /runtime\.autoRewriteAttempts/);
+    assert.match(script, /runtime\.attemptCounter/);
+});
+
+test('auto rewrite is gated by received and rendered generated messages', () => {
+    const script = fs.readFileSync('public/scripts/extensions/third-party/reply-polisher/index.js', 'utf8');
+
+    assert.match(script, /GENERATION_STARTED/);
+    assert.match(script, /MESSAGE_RECEIVED/);
+    assert.match(script, /CHARACTER_MESSAGE_RENDERED/);
+    assert.doesNotMatch(script, /GENERATION_ENDED/);
+    assert.doesNotMatch(script, /MESSAGE_SWIPED/);
+    assert.doesNotMatch(script, /maxAttempts/);
+});
+
+test('repository root is installable as a SillyTavern URL extension', () => {
+    const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+
+    assert.equal(manifest.display_name, 'Reply Polisher');
+    assert.equal(manifest.js, 'index.js?v=0.1.1');
+    assert.equal(fs.existsSync('index.js'), true);
+    assert.equal(fs.existsSync('core.js'), true);
+    assert.equal(fs.existsSync('settings.html'), true);
+    assert.equal(fs.existsSync('style.css'), true);
+    assert.match(fs.readFileSync('README.md', 'utf8'), /https:\/\/github\.com\/Achilng\/SillyTavern-async-plugin\.git/);
 });

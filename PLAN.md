@@ -135,6 +135,7 @@
 - [x] 解析 `choices[0].message.content` 作为重写文本。
 - [x] 当响应非 2xx、返回结构异常或重写文本为空时返回明确错误。
 - [x] 确保错误响应不包含 API key。
+- [x] 合并并发的相同 `/rewrite` 请求，避免重复前端实例同时调用模型 B。
 
 ### 任务 5：实现前端设置 UI 和后端设置联动
 
@@ -153,8 +154,10 @@
 
 ### 任务 6：实现前端重写编排
 
-- [x] 监听 `CHARACTER_MESSAGE_RENDERED` 处理普通回复。
-- [x] 监听 `MESSAGE_SWIPED` 处理切换到的 swipe 回复。
+- [x] 监听 `GENERATION_STARTED` 捕获生成开始前的最新助手回复身份。
+- [x] 监听 `MESSAGE_RECEIVED` 标记本次模型 A 已实际收到的目标回复。
+- [x] 监听 `CHARACTER_MESSAGE_RENDERED`，仅当同一条消息已先收到 `MESSAGE_RECEIVED` 时触发自动润色。
+- [x] 不再用 `GENERATION_ENDED` 或 `MESSAGE_SWIPED` 发起自动润色，避免 swipe 按钮状态切换导致提前处理和重复调用模型 B。
 - [x] 跳过用户消息、系统消息、小型系统消息、空消息和已处理消息。
 - [x] 跳过 `continue` 类型事件，避免处理追加生成。
 - [x] 捕获目标消息快照：
@@ -166,6 +169,8 @@
 - [x] 后端成功返回后再次校验快照，防止用户切换聊天、编辑消息或改变 swipe。
 - [x] 原地替换 `message.mes`，并同步当前 `swipes[swipe_id]` 和 `swipe_info[swipe_id].extra`。
 - [x] 在 `message.extra.reply_polisher` 中记录处理标记，避免重复自动处理。
+- [x] 使用全局运行锁避免同一页面重复扩展实例并发调用同一条回复。
+- [x] 为润色尝试编号，提示显示 `正在润色N`、`成功N`、`失败N`，便于排查重复触发来源。
 - [x] 调用 `updateMessageBlock()` 重新渲染，并调用 `saveChat()` 保存聊天。
 - [x] 失败时保留原文并显示 `toastr.error`。
 

@@ -3,3 +3,4 @@
 .env.*
 plugins/**/config.json
 !plugins/**/config.example.json
+server/config.json
